@@ -127,7 +127,7 @@ exports.execute = function execute(statement) {
     }
     else {
         try {
-            queryAsync(statement, arguments[1]);
+            queryAsync(statement,execute.arguments[1],execute.arguments[2]);
         }
         catch(e) {
             console.error(e.name + ' - ' + e.message);
