@@ -48,13 +48,17 @@ const storageService = Cc["@mozilla.org/storage/service;1"].
 let connection = null;
 
 /*Local function that make the query async*/
-function queryAsync(statement, success) {
+function queryAsync(statement, parameters, success) {
     /*sqrObject have the information about the result of query*/
     let sqrObject = new Object();
     sqrObject.data = new Array();
     sqrObject.cols = 0;
     sqrObject.rows = 0;
+
     let query = connection.createStatement(statement);
+    for(var p in parameters){
+    	query.params[p] = parameters[p];
+    }
     query.executeAsync({
         handleResult: function(resultSet) {
             for(var row=resultSet.getNextRow(); row; row=resultSet.getNextRow()) {
@@ -76,6 +80,35 @@ function queryAsync(statement, success) {
     });
 }
 
+// execute a statement against a batch of parameters
+exports.executeMany = function executeMany(txt, params, success, fail){
+    try{
+	var statement = connection.createStatement(txt);
+	var ps = statement.newBindingParamsArray();
+	for(var i = 0; i < params.length ; i++){
+	    var bp = ps.newBindingParams();
+	    for(var x in params[i]){
+		bp.bindByName(x,params[i][x]);
+	    }
+	    ps.addParams(bp);
+	}
+	statement.bindParameters(ps);
+	statement.executeAsync({handleCompletion: 
+				function(reason){
+				    if (reason != Ci.mozIStorageStatementCallback.REASON_FINISHED)
+					console.error("Query canceled or aborted!");
+				    if(reason == 0){ 
+					success() }
+				}
+				, handleError: function(error){            console.error(error.name+' - '+error.message); 	    console.error(connection.lastErrorString); fail(); }
+			    , handleResult: function(resultSet){} });   
+    }    catch(e){
+        console.error(e.name+' - '+e.message);
+	console.error(connection.lastErrorString);
+ 	
+    }
+}
+
 /*global method to connect with sqlite*/
 exports.connect = function connect(database) {
     fileDirectoryService.append(database);
@@ -94,7 +127,7 @@ exports.execute = function execute(statement) {
     }
     else {
         try {
-            queryAsync(statement, arguments[1]);
+            queryAsync(statement,execute.arguments[1],execute.arguments[2]);
         }
         catch(e) {
             console.error(e.name + ' - ' + e.message);
