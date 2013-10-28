@@ -35,19 +35,22 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const {Cc,Ci} = require("chrome");
+const {
+    Cc, Ci
+} = require("chrome");
 
 const fileDirectoryService = Cc["@mozilla.org/file/directory_service;1"].
-                            getService(Ci.nsIProperties).
-                            get("ProfD",Ci.nsIFile);
+getService(Ci.nsIProperties).
+get("ProfD", Ci.nsIFile);
 
 const storageService = Cc["@mozilla.org/storage/service;1"].
-                        getService(Ci.mozIStorageService);
+getService(Ci.mozIStorageService);
 
 /*Here is all the data about the current connection with sqlite*/
 let connection = null;
 
 /*Local function that make the query async*/
+
 function queryAsync(statement, parameters, success) {
     /*sqrObject have the information about the result of query*/
     let sqrObject = new Object();
@@ -56,15 +59,17 @@ function queryAsync(statement, parameters, success) {
     sqrObject.rows = 0;
 
     let query = connection.createStatement(statement);
-    for(var p in parameters){
-    	query.params[p] = parameters[p];
+    if (parameters != null) { /* if there is no parameters */
+        for (var p in parameters) {
+            query.params[p] = parameters[p];
+        }
     }
     query.executeAsync({
         handleResult: function(resultSet) {
-            for(var row=resultSet.getNextRow(); row; row=resultSet.getNextRow()) {
+            for (var row = resultSet.getNextRow(); row; row = resultSet.getNextRow()) {
                 sqrObject.cols = row.numEntries;
                 let dataRow = new Array(sqrObject.cols);
-                for(var i=0; i < sqrObject.cols; i++) {
+                for (var i = 0; i < sqrObject.cols; i++) {
                     dataRow[i] = row.getResultByIndex(i);
                 }
                 sqrObject.data[sqrObject.rows] = dataRow;
@@ -81,31 +86,37 @@ function queryAsync(statement, parameters, success) {
 }
 
 // execute a statement against a batch of parameters
-exports.executeMany = function executeMany(txt, params, success, fail){
-    try{
-	var statement = connection.createStatement(txt);
-	var ps = statement.newBindingParamsArray();
-	for(var i = 0; i < params.length ; i++){
-	    var bp = ps.newBindingParams();
-	    for(var x in params[i]){
-		bp.bindByName(x,params[i][x]);
-	    }
-	    ps.addParams(bp);
-	}
-	statement.bindParameters(ps);
-	statement.executeAsync({handleCompletion: 
-				function(reason){
-				    if (reason != Ci.mozIStorageStatementCallback.REASON_FINISHED)
-					console.error("Query canceled or aborted!");
-				    if(reason == 0){ 
-					success() }
-				}
-				, handleError: function(error){            console.error(error.name+' - '+error.message); 	    console.error(connection.lastErrorString); fail(); }
-			    , handleResult: function(resultSet){} });   
-    }    catch(e){
-        console.error(e.name+' - '+e.message);
-	console.error(connection.lastErrorString);
- 	
+exports.executeMany = function executeMany(txt, params, success, fail) {
+    try {
+        var statement = connection.createStatement(txt);
+        var ps = statement.newBindingParamsArray();
+        for (var i = 0; i < params.length; i++) {
+            var bp = ps.newBindingParams();
+            for (var x in params[i]) {
+                bp.bindByName(x, params[i][x]);
+            }
+            ps.addParams(bp);
+        }
+        statement.bindParameters(ps);
+        statement.executeAsync({
+            handleCompletion: function(reason) {
+                if (reason != Ci.mozIStorageStatementCallback.REASON_FINISHED)
+                    console.error("Query canceled or aborted!");
+                if (reason == 0) {
+                    success()
+                }
+            },
+            handleError: function(error) {
+                console.error(error.name + ' - ' + error.message);
+                console.error(connection.lastErrorString);
+                fail();
+            },
+            handleResult: function(resultSet) {}
+        });
+    } catch (e) {
+        console.error(e.name + ' - ' + e.message);
+        console.error(connection.lastErrorString);
+
     }
 }
 
@@ -117,19 +128,22 @@ exports.connect = function connect(database) {
 
 /*global method for execute any kind of instruction in sqlite*/
 exports.execute = function execute(statement) {
-    if(arguments.length == 1) {
+    if (arguments.length == 1) {
         try {
             connection.executeSimpleSQL(statement);
-        }
-        catch(e) {
+        } catch (e) {
             console.error(e.name + ' - ' + e.message);
         }
-    }
-    else {
+    } else if (arguments.length == 2) { /* if there is no parameters */
         try {
-            queryAsync(statement,execute.arguments[1],execute.arguments[2]);
+            queryAsync(statement, null, execute.arguments[1]);
+        } catch (e) {
+            console.error(e.name + ' - ' + e.message);
         }
-        catch(e) {
+    } else {
+        try {
+            queryAsync(statement, execute.arguments[1], execute.arguments[2]);
+        } catch (e) {
             console.error(e.name + ' - ' + e.message);
         }
     }
@@ -139,4 +153,3 @@ exports.execute = function execute(statement) {
 exports.close = function close() {
     connection = null;
 }
-
