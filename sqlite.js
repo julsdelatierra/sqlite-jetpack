@@ -127,7 +127,7 @@ exports.connect = function connect(database) {
 }
 
 /*global method to connect with sqlite, with relative path to DB */
-exports.connect = function connectRelative(database) {
+exports.connectRelative = function connectRelative(database) {
     fileDirectoryService.appendRelativePath(database);
     connection = storageService.openDatabase(fileDirectoryService);
 }
