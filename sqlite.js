@@ -126,6 +126,12 @@ exports.connect = function connect(database) {
     connection = storageService.openDatabase(fileDirectoryService);
 }
 
+/*global method to connect with sqlite, with relative path to DB */
+exports.connect = function connectRelative(database) {
+    fileDirectoryService.appendRelativePath(database);
+    connection = storageService.openDatabase(fileDirectoryService);
+}
+
 /*global method for execute any kind of instruction in sqlite*/
 exports.execute = function execute(statement) {
     if (arguments.length == 1) {
@@ -151,5 +157,6 @@ exports.execute = function execute(statement) {
 
 /*global method to close connection with sqlite*/
 exports.close = function close() {
+    connection.asyncClose();
     connection = null;
 }
